@@ -5,7 +5,7 @@ import os
 import random
 
 load_dotenv()
-#TOKEN = os.getenv("TOKEN") TODO: Figure out if bot.run(os.getenv(f"{TOKEN})) ? bot.run(f"{TOKEN})
+TOKEN = os.getenv("TOKEN") #TODO: Figure out if bot.run(os.getenv(f"{TOKEN})) ? bot.run(f"{TOKEN})
 
 description = """A bot that can ping you for events you create"""
 
@@ -14,6 +14,7 @@ intents.members = True
 intents.message_content = True
 
 bot = commands.Bot(
+    command_prefix=commands.when_mentioned_or("!"),
     description = description,
     intents = intents,
 ) 
@@ -24,24 +25,27 @@ bot = commands.Bot(
 async def on_ready():
     print(f"We have logged in as {bot.user}")
 
-@bot.command(description="For when you wanna settle the score some other way")
-async def choose(ctx: commands.Context, *choices: str):
-    """Chooses between multiple choices."""
-    await ctx.send(random.choice(choices))
+@bot.slash_command(name="guess", description="Guess a number between 1 and 69!")
+async def gtn(ctx: discord.ApplicationContext):
+    await ctx.respond("Guess a number between 1 and 69.")
 
-#@bot.command()
-#async def gtn(ctx):
-#    """A Slash Command to play a Guess-the-Number game."""
-#
-#    await ctx.respond('Guess a number between 1 and 10.')
-#    guess = await bot.wait_for("message", check=lambda message: message.author == ctx.author)
-#
-#    if int(guess.content) == 5:
-#        await ctx.send('You guessed it!')
-#    else:
-#        await ctx.send('Nope, try again.')
+    def is_valid_guess(m: discord.Message):
+        return (
+            m.author == ctx.author and m.content.isdigit() and 1 <= (m.content) < 70
+        )
 
+    answer = random.randint(1,69)
 
-bot.run(os.getenv("TOKEN"))
+    try:
+        guess: discord.Message = await bot.wait_for("message", check=is_valid_guess, timeout=5.0)
+    except TimeoutError:
+        return await ctx.send_followup(f"Sorry, you took to long, the answer is {answer}")
+
+    if int(guess.content) == answer:
+        await guess.reply("You are right!", mention_author=True)
+    else:
+        await guess.reply(f"Oops, the answer was actually {answer}")
+
+bot.run(f"{TOKEN}")
 
 
